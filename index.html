@@ -830,12 +830,26 @@ function renderSales(){
         </div>
         <div class="card-actions">
           <button class="btn btn-outline btn-sm" data-view="${i.id}">عرض / طباعة</button>
+          <button class="btn btn-danger btn-sm" data-delinv="${i.id}">حذف</button>
         </div>
       </div>`;
     }).join('');
   }
   document.getElementById('content').innerHTML = html;
   document.querySelectorAll('[data-view]').forEach(el=> el.addEventListener('click', ()=> viewInvoice(el.dataset.view)));
+  document.querySelectorAll('[data-delinv]').forEach(el=> el.addEventListener('click', ()=> deleteInvoice(el.dataset.delinv)));
+}
+
+function deleteInvoice(id){
+  const inv = DB.invoices.find(i=>i.id===id);
+  if(!inv) return;
+  if(!confirm('هل تريد حذف هذه الفاتورة؟ سيتم إرجاع الكميات المخصومة إلى المخزون تلقائيًا.')) return;
+  inv.items.forEach(it=>{
+    const p = DB.products.find(x=>x.id===it.productId);
+    if(p) p.qty = Number(p.qty) + Number(it.qty);
+  });
+  DB.invoices = DB.invoices.filter(i=>i.id!==id);
+  saveDB(); renderSales(); toast('تم حذف الفاتورة وإرجاع الكميات للمخزون');
 }
 
 function viewInvoice(id){
@@ -851,10 +865,12 @@ function viewInvoice(id){
     <div class="modal-actions">
       <button class="btn btn-outline" id="closeBtn">إغلاق</button>
       <button class="btn btn-gold" id="printBtn">طباعة</button>
-    </div>`;
+    </div>
+    <button class="btn btn-danger btn-block" id="deleteInvBtn" style="margin-top:10px;">حذف الفاتورة</button>`;
   const ov = openModal('تفاصيل الفاتورة', body, o=>{
     o.querySelector('#closeBtn').addEventListener('click', ()=> closeModal(o));
     o.querySelector('#printBtn').addEventListener('click', ()=> printInvoice(inv, mer));
+    o.querySelector('#deleteInvBtn').addEventListener('click', ()=>{ closeModal(o); deleteInvoice(inv.id); });
   });
 }
 function printInvoice(inv, mer){
